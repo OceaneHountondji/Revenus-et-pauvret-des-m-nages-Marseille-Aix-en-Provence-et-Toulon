@@ -1,0 +1,424 @@
+---
+title: "Analyse bases de données"
+author: "Aissata Correa & Finafa Hountondji"
+date: "2023-12-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+### Importation des données
+```{r}
+library(readxl)
+D=read_excel("aix.xlsx")
+
+```
+
+
+#Aix-en-Provence
+
+##taux de pauvreté
+```{r}
+
+library(dplyr)
+# Calculer le seuil de pauvreté (60% du niveau de vie médian)
+seuil_pauvrete <- 0.6 * median(D$DISP_TP6018, na.rm = TRUE)
+
+# Ajouter une colonne pour indiquer si chaque individu est en dessous du seuil de pauvreté
+D <- D %>% mutate(Below_Poverty_Line = DISP_TP6018 < seuil_pauvrete)
+
+# Calculer le taux de pauvreté
+taux_pauvrete <- sum(D$Below_Poverty_Line, na.rm = TRUE) / nrow(D) * 100
+
+# Afficher le taux de pauvreté
+cat("Le taux de pauvreté est de", round(taux_pauvrete, 2), "%.\n")
+
+
+```
+
+
+#revenu disponible
+```{r}
+# Ajouter une nouvelle colonne pour le revenu disponible moyen par habitant
+D$Revenu_Disponible_Moyen <- (D$DISP_EQ18 / D$DISP_S80S2018) * D$DISP_MED18
+
+
+head(D)
+
+
+
+```
+
+
+#Revenu disponible
+```{r}
+# Calcul du revenu disponible au 25e percentile (RD25)
+D$RD25 <- D$DISP_Q118 + D$DISP_PACT18 + D$DISP_PPEN18 + D$DISP_PPSOC18 - D$DISP_PIMPOT18
+mean()
+# Calcul du revenu disponible au 50e percentile (RD50, médiane)
+D$RD50 <- D$DISP_MED18 + D$DISP_PACT18 + D$DISP_PPEN18 + D$DISP_PPSOC18 - D$DISP_PIMPOT18
+# Calcul du revenu disponible au 75e percentile (RD75)
+D$RD75 <- D$DISP_D918 + D$DISP_PACT18 + D$DISP_PPEN18 + D$DISP_PPSOC18 - D$DISP_PIMPOT18
+# Afficher le résultat
+head(D)  # Affiche les premières lignes du data frame avec les nouvelles colonnes RD25, RD50, RD75
+
+```
+#plus important 
+```{r}
+
+# Calcul de la répartition en pourcentage
+D$PA_percent <- (D$DISP_PACT18 / D$RD50) * 100;
+D$PR_percent <- (D$DISP_PPEN18 / D$RD50) * 100
+D$RP_percent <- (D$DISP_PPSOC18 / D$RD50) * 100
+D$PS_percent <- (D$DISP_PIMPOT18 / D$RD50) * 100
+
+# Afficher le résultat
+head(D)  
+
+```
+#graphiques
+```{r}
+pourcentage=c(D$PA_percent,D$PR_percent,D$RP_percent,D$PS_percent)
+repartition=c(rep("PA",length(D$PA_percent)),rep("PR",length(D$PR_percent)),rep("RP",length(D$RP_percent)),rep("PS",length(D$PS_percent)))
+as.factor(repartition)
+boxplot(pourcentage~repartition,xlab="Source des revenus",ylab="Part du revenu disponible", main="Répartition du revenu disponible moyen \n d'un individu vivant à Aix-en-Provence ")
+
+```
+#Indice gini
+```{r}
+mean(D$DISP_GI18)
+```
+#supprimer au moins 40 lignes voire 45 lignes pour utiliser cette méthode donc revoir la méthode de suppression de lignes sur youtube ou google
+```{r}
+
+library(ggplot2)
+
+xg <- data.frame("gini" = D$DISP_GI18, "quartiers" = D$LIBIRIS)
+xg <- xg[-c(2, 5, 16, 3, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53), ]
+
+ggplot(xg, aes(x = quartiers, y = gini, group = 1)) +
+  geom_line(color = "#00AFBB", linewidth = 0.2) +
+  labs(x = "Quartiers", y = "Indice de Gini", title = "Variation de l'Indice de Gini par Quartiers")
+
+
+
+
+```
+
+#nouvelle base de données
+```{r}
+x <- data.frame("revenu" = D$DISP_Q118, "quartiers" = D$LIBIRIS)
+x <- x[-c(2, 5, 16, 3, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53), ]
+```
+#quartier d'aix en provence 
+```{r}
+
+plot(D$DISP_MED18, D$DISP_TP6018, main = "Nuage de points entre la médiane du revenu disponible \n et le taux de pauvreté", xlab = "Médiane du revenu disponible (€)", ylab = "Taux de pauvreté (%)", col = "#00AFBB")
+#boxplot(x$revenu ~ x$quartiers,   main = "Diagramme en boîte du revenu disponible au 1er quartile par quartier",   ylab = "Revenu disponible au 1er quartile (€)",  col = "#00AFBB",  las = 2)
+
+#taux de pauvreté
+dt<- data.frame("taux" = D$DISP_TP6018, "quartiers" = D$LIBIRIS)
+dt <- dt[-c(2, 5, 16, 3, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,8,13), ]
+barplot(dt$taux, names.arg = dt$quartiers, col = "lightgrey",  main = "Taux moyen de pauvreté dans certains quartiers d'Aix-en-Provence", xlab = "Quartiers", ylab = "Taux de pauvreté (%)")
+
+
+```
+### Importation des données
+
+```{r}
+library(readxl)
+B <- read_excel("base.xlsx")
+
+```
+
+#extraction des villes à étudier
+
+```{r}
+#Paris
+paris=B[B$COM=="75120",]
+#Montpelier
+montpellier=B[B$LIBCOM=="Montpellier",]
+#Nice
+nice=B[B$LIBCOM=="Nice",]
+#Lyon
+lyon=B[B$COM=="69385",]
+#Toulouse
+toulouse=B[B$LIBCOM=="Toulouse",]
+
+```
+
+#taux de pauverté moyens des villes étudiées
+
+```{r}
+#taux moyen de pauvreté au seuil de 60% par ville
+#paris
+taux_pauvrete_moyen<- mean(paris$DISP_TP6018, na.rm = TRUE)
+#lyon
+taux_pauvrete_moyen1<- mean(lyon$DISP_TP6018, na.rm = TRUE)
+#toulouse
+taux_pauvrete_moyen2<- mean(toulouse$DISP_TP6018, na.rm = TRUE)
+#nice
+taux_pauvrete_moyen3<- mean(nice$DISP_TP6018, na.rm = TRUE)
+#montpellier
+taux_pauvrete_moyen4<- mean(montpellier$DISP_TP6018, na.rm = TRUE)
+```
+
+#graphiques
+
+```{r}
+villes <- c("Paris", "Lyon", "Marseille", "Toulouse","Nice","Montpellier")
+taux_pauvrete <- c(21.59851,13.45385,28.42, 21.63714, 21.20148, 27.67778)
+T<- data.frame(Ville = villes, Taux_Pauvrete_Moyen = taux_pauvrete)
+
+#graphique à barres
+barplot(T$Taux_Pauvrete_Moyen, names.arg = T$Ville, col = "lightgrey", main = "Taux de Pauvreté Moyen par Ville", xlab = "Villes", ylab = "Taux de Pauvreté Moyen (%)")
+
+```
+
+#revenus disponibles
+
+```{r}
+#paris
+rp <-paris$DISP_PACT18 + paris$DISP_PPEN18 + paris$DISP_PPAT18 +paris$DISP_PPLOGT18 - paris$DISP_PIMPOT18
+mean(rp)*100
+#lyon
+rl<-lyon$DISP_PACT18 + lyon$DISP_PPEN18 + lyon$DISP_PPAT18 +lyon$DISP_PPLOGT18 - lyon$DISP_PIMPOT18
+mean(rl)*100
+#toulouse
+rt<-toulouse$DISP_PACT18 + toulouse$DISP_PPEN18 + toulouse$DISP_PPAT18 +toulouse$DISP_PPLOGT18 - toulouse$DISP_PIMPOT18
+mean(rt)*100
+#nice
+rn<-nice$DISP_PACT18 + nice$DISP_PPEN18 + nice$DISP_PPAT18 +lyon$DISP_PPLOGT18 -nice$DISP_PIMPOT18
+mean(rn)*100
+#montpellier"
+rm<-montpellier$DISP_PACT18 +montpellier$DISP_PPEN18 + montpellier$DISP_PPAT18 +montpellier$DISP_PPLOGT18 - montpellier$DISP_PIMPOT18
+mean(rm)*100
+
+
+```
+
+#graphique
+
+```{r}
+revenu_dispo <- c(13549.86,14081.11,14213,13193.22,13098.82,12763.69)
+R<- data.frame(Ville = villes, Revenu_Disponible = revenu_dispo)
+
+#graphique à barres
+barplot(R$Revenu_Disponible, names.arg =R$Ville, col = "lightgreen", main = "Revenus disponible moyen par Ville", xlab = "Villes", ylab = " Revenu disponible Moyen")
+```
+
+#graphique
+
+```{r}
+plot(revenu_dispo,taux_pauvrete, 
+     main = "Nuage de points entre le revenu disponible moyen \n et le taux de pauvreté",
+     xlab = "Revenu disponible moyen (€)",
+     ylab = "Taux de pauvreté (%)",
+     col = "skyblue")
+
+```
+
+
+
+# Analyse descritive de la ville de Toulon
+
+```{r}
+#Toulon
+toulon=B[B$LIBCOM=="Toulon",]
+library(dplyr)
+# Calculer le seuil de pauvreté (60% du niveau de vie médian)
+seuil_pauvrete <- 0.6 * median(toulon$DISP_TP6018, na.rm = TRUE)
+# Ajouter une colonne pour indiquer si chaque individu est en dessous du seuil de pauvreté
+toulon <- toulon %>% mutate(Below_Poverty_Line = DISP_TP6018 < seuil_pauvrete)
+# Calculer le taux de pauvreté
+taux_pauvrete <- sum(toulon$Below_Poverty_Line, na.rm = TRUE) / nrow(toulon) * 100
+
+# Calcul du revenu disponible au 25e percentile (RD25)
+toulon$RD25 <- toulon$DISP_Q118 + toulon$DISP_PACT18 + toulon$DISP_PPEN18 + toulon$DISP_PPSOC18 - toulon$DISP_PIMPOT18
+mean(toulon$RD25)
+# Calcul du revenu disponible au 50e percentile (RD50, médiane)
+toulon$RD50 <- toulon$DISP_MED18 + toulon$DISP_PACT18 + toulon$DISP_PPEN18 + toulon$DISP_PPSOC18 - toulon$DISP_PIMPOT18
+mean(toulon$RD50)
+# Calcul du revenu disponible au 75e percentile (RD75)
+toulon$RD75 <- toulon$DISP_D918 + toulon$DISP_PACT18 + toulon$DISP_PPEN18 + toulon$DISP_PPSOC18 - toulon$DISP_PIMPOT18
+mean(toulon$RD75)
+# Calcul de la répartition en pourcentage
+toulon$PA_percent <- (toulon$DISP_PACT18 / toulon$RD75) * 100;
+mean(toulon$PA_percent)
+toulon$PR_percent <- (toulon$DISP_PPEN18 / toulon$RD75) * 100;
+mean(toulon$PR_percent)
+toulon$RP_percent <- (toulon$DISP_PPSOC18 / toulon$RD75) * 100;
+mean(toulon$RP_percent)
+toulon$PS_percent <- (toulon$DISP_PIMPOT18 / toulon$RD75) * 100
+mean(toulon$PS_percent)
+#indice de gini 
+mean(toulon$DISP_GI18)
+
+#graphiques
+revenu <- c("PA", "PR", "RP", "PS")
+part <- c(19.62893,9.769858,9.769858,-4.687815)
+P<- data.frame(Revenu = revenu, Part_revenu = part)
+
+#graphique à barres
+barplot(P$Part_revenu, names.arg = P$Revenu, col = "skyblue", 
+        main = "Répartition du revenu disponible moyen d'un individu vivant à Toulon",
+        xlab = "Source des revenus", ylab = "Part du revenu disponible (%)")
+
+plot(toulon$DISP_MED18, toulon$DISP_TP6018, 
+     main = "Nuage de points entre la médiane du revenu disponible \n et le taux de pauvreté",
+     xlab = "Médiane du revenu disponible (€)", ylab = "Taux de pauvreté (%)", col = "lightgreen")
+
+
+```
+
+#indice gini
+
+```{r}
+xt <- data.frame("gini" = toulon$DISP_GI18, "quartiers" = toulon$LIBIRIS)
+xt <- xt[-c(56,58,3,4,6, 5, 16, 3, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 51, 52, 53,65,66,62,64,55,13,69,70,57,61,59,47,2,29,60), ]
+#boxplot(xt$gini~xt$quartiers,xlab = "Quartiers",  ylab = "Indice de Gini", main = "l'Indice de Gini dans les Quartiers de Toulon")
+#taux de pauvreté
+xt1<- data.frame("taux" = toulon$DISP_TP6018, "quartiers" = toulon$LIBIRIS)
+xt1 <- xt1[-c(56,58,3,4,6, 5, 16, 3, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 51, 52, 53,65,66,62,64,55,13,69,70,57,61,59,47,2,29,60,54), ]
+
+barplot(xt1$taux, names.arg = xt1$quartiers, col = "lightgrey",  main = "Taux moyen de pauvreté dans certains quartiers de Toulon", xlab = "Quartiers", ylab = "Taux de pauvreté (%)")
+#revenu disponible
+xt2<- data.frame("revenu" = toulon$RD75, "quartiers" = toulon$LIBIRIS)
+xt2 <- xt2[-c(56,58,3,4,6, 5, 16, 3, 7, 9, 10, 11, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 51, 52, 53,65,66,62,64,55,13,69,70,57,61,59,47,2,29,60), ]
+barplot(xt2$revenu, names.arg = xt2$quartiers, col = "lightgrey", 
+        main = "Revenu pour les 75% habitants de certains quartiers de Toulon",
+        xlab = "Quartiers", ylab = "Revenu")
+```
+
+
+# Marseille
+```{r}
+E = read_xlsx("marseille.xlsx")
+G = read_xlsx("toulon.xlsx")
+```
+
+```{r}
+#Marseille globalement
+mean(E$DISP_Q118)
+mean(E$DISP_MED18)
+mean(E$DISP_Q318)
+
+
+marseille=c(mean(E$DISP_PACT18), mean(E$DISP_PPEN18), mean(E$DISP_PPAT18), mean(E$DISP_PPSOC18)); 
+
+barplot(marseille,names.arg=c("RA", "PR", "RP", "PS"), xlab="Source des revenus", ylab="Part du revenu disponible", main="Répartition du revenu disponible moyen d'un individu \n vivant à Marseille")
+
+#indice de gini à marseille
+mean(E$DISP_GI18)
+
+#taux moyen réservé aux impôts
+mean(E$DISP_PIMPOT18)
+```
+
+## taux de pauvreté
+```{r}
+#taux moyen de pauvreté au seuil de 60% par arrondissement
+taux_moyen<-aggregate(E$DISP_TP6018, list(E$LIBCOM), FUN=mean, na.rm=T)
+
+Tau = data.frame(taux_moyen$Group.1, taux_moyen$x)
+permutation<-order(Tau$taux_moyen.x, decreasing = T)
+taux_moyen_arron<-Tau[permutation,]
+colnames(taux_moyen_arron)<-c("Arrondissement", "Taux moyen de pauvreté")
+taux_moyen_arron
+min(taux_moyen_arron$`Taux moyen de pauvreté`); max(taux_moyen_arron$`Taux moyen de pauvreté`)
+
+
+tableau=taux_moyen_arron[1:8,]
+tableau
+
+barplot(tableau$`Taux moyen de pauvreté`, names.arg = tableau$Arrondissement, xlab="Arrondissement", ylab="Taux moyen", main="Top 8 des arrondissements de Marseille pour le taux moyen \n de pauvreté au seuil de 60% ")
+```
+
+## revenu moyen 
+```{r}
+Q2=aggregate(E$DISP_MED18, list(E$LIBCOM), FUN=mean, na.rm=T)
+Q2=data.frame(Q2$Group.1, Q2$x)
+ordre2<-order(Q2$Q2.x, decreasing=T)
+Q2=Q2[ordre2,]
+colnames(Q2)<-c("arrondissement", "Q2");Q2
+
+Q2t=Q2[1:8,]
+
+barplot(Q2t$Q2, names.arg = Q2t$arrondissement, xlab="Arrondissement", ylab="Médiane", main="Top 8 des arrondissements de Marseille pour la médiane \n  du revenu disponible")
+
+```
+
+## indice de gini
+```{r}
+gini=aggregate(E$DISP_GI18, list(E$LIBCOM), FUN=mean)
+gini=data.frame(gini$Group.1, gini$x)
+colnames(gini)<-c("arrondissement", "indice de gini")
+giniordre<-order(gini$`indice de gini`, decreasing=T)
+gini=gini[giniordre,];gini
+
+ginit=gini[1:8,]
+boxplot(gini$`indice de gini`~gini$arrondissement, xlab="arrondissement", ylab="indice de Gini", main="Indice de Gini pour les arrondissements de Marseille")
+```
+
+# Analyse descriptive bivariée
+```{r}
+
+#marseille
+plot(E$DISP_MED18, E$DISP_TP6018, xlab="Revenu disponible moyen",ylab="Taux de pauvreté", main="Nuage de points entre le revenu disponible moyen \n et le taux de pauvreté à Marseille", col="red")
+
+#aix-en-provence
+plot(D$DISP_MED18, D$DISP_TP6018, xlab="Revenu disponible moyen",ylab="Taux de pauvreté", main="Nuage de points entre le revenu disponible moyen \n et le taux de pauvreté à Aix-en-Provence", col="blue")
+
+#toulon
+plot(G$DISP_MED18, G$DISP_TP6018, xlab="Revenu disponible moyen",ylab="Taux de pauvreté", main="Nuage de points entre le revenu disponible moyen \n et le taux de pauvreté à Toulon", col="green")
+```
+
+
+## Tests de corrélation
+```{r}
+#test de corrélation entre le revenu et le taux de pauvreté
+
+#Marseille
+cor.test(E$DISP_MED18, E$DISP_TP6018)
+
+#Aix-en-Provence
+cor.test(D$DISP_MED18, D$DISP_TP6018)
+
+#Toulon
+cor.test(G$DISP_MED18, G$DISP_TP6018)
+```
+
+## Comparaison des revenus des trois villes
+```{r}
+revenu_marseille = E$DISP_MED18
+revenu_aix = D$DISP_MED18
+revenu_toulon = G$DISP_MED18
+
+revenu = c(revenu_marseille, revenu_aix, revenu_toulon)
+ville=c(rep("marseille", length(revenu_marseille)),rep("aix", length(revenu_aix)), rep("toulon", length(revenu_toulon)))
+ville=as.factor(ville)
+H = data.frame(revenu, ville); H
+```
+
+
+```{r}
+# anova
+monaov=aov(revenu~ville); summary(monaov)
+
+# homogénéité des variances
+leveneTest(monaov)
+
+# normailté des résidus
+shapiro.test(monaov$residuals)
+hist(monaov$residuals, freq=F, main="histogramme des résidus", xlab="résidus")
+curve(dnorm(x,mean(monaov$residuals),sd(monaov$residuals)), add=T)
+```
+
+```{r}
+plot(TukeyHSD(monaov))
+```
+
+
