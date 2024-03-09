@@ -1,7 +1,6 @@
 # Revenus-et-pauvrete-des-menages-a-Marseille-Aix-en-Provence-et-Toulon
 
-https://api.francelive.fr/resources/Jrb9CPou0YLx68fBAvHJ0QB4Cth6L6ad7U9Ya_e5CN4ut95d9CHVgLZ2Pu--QyY_qUfF8Y3XOld_rWwIMpI7ppA18yemR_iAmVsXtLFUREQ
-
+![image](https://github.com/OceaneHountondji/Revenus-et-pauvret-des-m-nages-Marseille-Aix-en-Provence-et-Toulon/assets/123971552/bd1693fd-ae53-4bb7-bc68-7bed0c63ba00)
 
 Ce projet réalisé en binôme a été réalisé dans le cadre du cours de Statistiques avec R. 
 
